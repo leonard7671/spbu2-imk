@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=360, initial-scale=1.0">
+<title>Simulasi Dispenser BBM</title>
+
+<style>
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:#e9edf2;display:flex;justify-content:center}
+.phone{width:360px;min-height:760px;background:#e9edf2}
+.header{height:64px;background:linear-gradient(#0a4fa3,#0a2a66);color:#fff;
+display:flex;align-items:center;justify-content:center;font-weight:bold}
+.screen{display:none}
+.screen.active{display:block}
+.card{width:320px;background:#fff;margin:32px auto;border-radius:12px;
+padding:20px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.center{text-align:center}
+
+input,select{
+width:100%;height:44px;margin:8px 0;border-radius:8px;
+border:1px solid #cbd5e1;background:#f4f6f8;padding:0 12px}
+
+.btn{
+width:100%;height:48px;border:none;border-radius:8px;
+color:#fff;font-weight:bold;margin-top:12px;cursor:pointer}
+.green{background:linear-gradient(#2ecc71,#27ae60)}
+.blue{background:#0a2a66}
+.red{background:#e74c3c}
+
+.row{display:flex;gap:12px}
+.box{
+flex:1;background:#1e293b;color:#fff;border-radius:8px;
+padding:16px;text-align:center;font-weight:bold}
+
+.progress{width:100%;height:8px;background:#cbd5e1;border-radius:4px;margin:16px 0}
+.progress-fill{height:8px;background:#0a4fa3;border-radius:4px;width:0%}
+
+.radio{display:flex;align-items:center;gap:12px;margin:10px 0;cursor:pointer}
+.circle{width:16px;height:16px;border:2px solid #0a2a66;border-radius:50%}
+.circle.active{background:#0a2a66}
+
+.success{
+width:72px;height:72px;border-radius:50%;background:#2ecc71;
+color:#fff;font-size:40px;display:flex;align-items:center;
+justify-content:center;margin:0 auto 16px}
+</style>
+</head>
+
+<body>
+<div class="phone">
+<div class="header">SIMULASI DISPENSER BBM</div>
+
+<!-- LOGIN -->
+<div class="screen active" id="login">
+  <div class="card center">
+    <h2>Login</h2>
+    <p>Masuk untuk melanjutkan simulasi</p>
+    <input placeholder="Username">
+    <input type="password" placeholder="Password">
+    <button class="btn green" onclick="go('bbm')">LOGIN</button>
+  </div>
+</div>
+
+<!-- PILIH BBM -->
+<div class="screen" id="bbm">
+  <div class="card">
+    <h3>Pilih Jenis BBM</h3>
+    <select id="bbmSelect">
+      <option value="10000">Pertalite - Rp 10.000/L</option>
+      <option value="13000">Pertamax - Rp 13.000/L</option>
+      <option value="6800">Solar - Rp 6.800/L</option>
+    </select>
+
+    <input id="targetNominal" type="number" placeholder="Target isi (Rp)">
+
+    <p>Harga / Liter: <b id="hargaLiter">Rp 10.000</b></p>
+    <button class="btn green" onclick="startIsi()">START</button>
+  </div>
+</div>
+
+<!-- PENGISIAN -->
+<div class="screen" id="isi">
+  <div class="card">
+    <h3 id="namaBBM">Pertalite</h3>
+    <p>Harga/L: <span id="hargaIsi"></span></p>
+
+    <div class="row">
+      <div class="box"><span id="volume">0.00</span> L</div>
+      <div class="box">Rp <span id="total">0</span></div>
+    </div>
+
+    <div class="progress">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+
+    <div class="row">
+      <button class="btn red" onclick="stopIsi()">STOP</button>
+      <button class="btn blue" onclick="go('bayar')">Lanjut</button>
+    </div>
+  </div>
+</div>
+
+<!-- PEMBAYARAN -->
+<div class="screen" id="bayar">
+  <div class="card">
+    <h3>Total Bayar</h3>
+    <h2>Rp <span id="totalBayar"></span></h2>
+
+    <div class="radio" onclick="pilihMetode('QRIS')">
+      <div class="circle active"></div> QRIS
+    </div>
+    <div class="radio" onclick="pilihMetode('Debit')">
+      <div class="circle"></div> Kartu Debit
+    </div>
+    <div class="radio" onclick="pilihMetode('E-Wallet')">
+      <div class="circle"></div> E-Wallet
+    </div>
+    <div class="radio" onclick="pilihMetode('Tunai')">
+      <div class="circle"></div> Tunai
+    </div>
+
+    <button class="btn blue" onclick="go('sukses')">BAYAR</button>
+  </div>
+</div>
+
+<!-- SUKSES -->
+<div class="screen" id="sukses">
+  <div class="card center">
+    <div class="success">✓</div>
+    <h3>Pembayaran Berhasil</h3>
+    <p>BBM: <span id="sBBM"></span></p>
+    <p>Volume: <span id="sVolume"></span> L</p>
+    <p>Total: Rp <span id="sTotal"></span></p>
+    <p>Metode: <span id="sMetode"></span></p>
+    <button class="btn blue" onclick="go('login')">SELESAI</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+let harga=10000, volume=0, total=0;
+let interval, metode='QRIS', bbm='Pertalite';
+let target=0;
+
+
+function go(id){
+ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+}
+
+document.getElementById('bbmSelect').onchange=e=>{
+ harga=e.target.value;
+ bbm=e.target.options[e.target.selectedIndex].text.split(' -')[0];
+ document.getElementById('hargaLiter').innerText='Rp '+harga;
+}
+
+function startIsi(){
+  target = parseInt(document.getElementById('targetNominal').value);
+
+  if(!target || target <= 0){
+    alert('Masukkan target nominal terlebih dahulu');
+    return;
+  }
+
+  volume = 0;
+  total = 0;
+
+  document.getElementById('namaBBM').innerText = bbm;
+  document.getElementById('hargaIsi').innerText = 'Rp ' + harga;
+
+  go('isi');
+
+  interval = setInterval(()=>{
+    volume += 0.01;
+    total = Math.floor(volume * harga);
+
+    document.getElementById('volume').innerText = volume.toFixed(2);
+    document.getElementById('total').innerText = total;
+    document.getElementById('totalBayar').innerText = total;
+
+    document.getElementById('progress').style.width =
+      Math.min((total / target) * 100, 100) + '%';
+
+    // ⛽ AUTO STOP JIKA TARGET TERCAPAI
+    if(total >= target){
+      clearInterval(interval);
+      document.getElementById('progress').style.width = '100%';
+    }
+
+  }, 100);
+}
+
+
+function stopIsi(){ clearInterval(interval); }
+
+function pilihMetode(m){
+ metode=m;
+ document.querySelectorAll('.circle').forEach(c=>c.classList.remove('active'));
+ event.currentTarget.querySelector('.circle').classList.add('active');
+ document.getElementById('sMetode').innerText=metode;
+ document.getElementById('sBBM').innerText=bbm;
+ document.getElementById('sVolume').innerText=volume.toFixed(2);
+ document.getElementById('sTotal').innerText=total;
+}
+</script>
+</body>
+</html>
